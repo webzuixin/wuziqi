@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css" />
+    <!-- <script src="main.js"></script> -->
+</head>
+
+<body>
+    <h3 class="title">---五子棋---</h3>
+    <!-- h5里面的canvas 来画棋盘 -->
+    <canvas class="chess" width="450px" height="450px"></canvas>
+    <div>
+        <a href="#" class="restart" onclick="rst()">重新开始</a>
+    </div>
+    <script>
+        var chess = document.getElementsByClassName("chess")[0];
+        var title = document.getElementsByClassName("title")[0];
+        // 得到棋盘的2d上下文，通过上下文来绘制棋盘内容
+        var context = chess.getContext("2d");
+        // 绘制线的颜色
+        context.strokeStyle = "#b9b9b9";
+
+        // 调用下面的方法，这个画出了横线
+        window.onload = function() {
+            drawChessBoard();
+        };
+
+        // 设置一个方法来画线
+        function drawChessBoard() {
+            // 利用for循环来绘制线的条数
+            for (var i = 0; i < 15; i++) {
+                // moveTo设置起始点的坐标   lineTo设置结束点的坐标
+                // X轴
+                // 通过起始点和结束点来确定一条线
+                context.moveTo(15, 15 + i * 30);
+                context.lineTo(435, 15 + 30 * i);
+                // 连接两点 stroke
+                context.stroke();
+                // Y轴
+                context.moveTo(15 + i * 30, 15);
+                context.lineTo(15 + 30 * i, 435);
+                context.stroke();
+            }
+        }
+
+        // 设置赢法数组
+        // 三维数组存放X、Y还有赢法编号
+        var wins = [];
+        for (var i = 0; i < 15; i++) {
+            wins[i] = []; //变成二维数组
+            for (var j = 0; j < 15; j++) {
+                wins[i][j] = []; //变成三维数组
+            }
+        }
+
+        // 赢法编号
+        var count = [];
+        // 统计横向赢法
+        for (var i = 0; i < 15; i++) {
+            for (var j = 0; j < 11; j++) {
+                for (var k = 0; k < 5; k++) {
+                    wins[j + k][i][count] = true;
+                }
+                count++;
+            }
+        }
+        // 统计竖线赢法
+        for (var i = 0; i < 15; i++) {
+            for (var j = 0; j < 11; j++) {
+                for (var k = 0; k < 5; k++) {
+                    wins[i][j + k][count] = true;
+                }
+                count++;
+            }
+        }
+        // 统计正斜线
+        for (var i = 0; i < 11; i++) {
+            for (var j = 0; j < 11; j++) {
+                for (var k = 0; k < 5; k++) {
+                    wins[i + k][j + k][count] = true;
+                }
+                count++;
+            }
+        }
+        // 统计反斜线
+        for (var i = 0; i < 11; i++) {
+            for (var j = 14; j > 3; j--) {
+                for (var k = 0; k < 5; k++) {
+                    wins[i + k][j - k][count] = true;
+                }
+                count++;
+            }
+        }
+
+        // 定义二维数组标记棋盘上的每个坐标是否下了棋子
+        var chessBoard = [];
+        for (var i = 0; i < 15; i++) {
+            // 给一维数组再添加一个一维数组
+            chessBoard[i] = [];
+            // 遍历二维数组
+            for (var j = 0; j < 15; j++) {
+                // 默认每个棋盘上没有棋子   当下上棋子之后改成  1
+                chessBoard[i][j] = 0;
+            }
+        }
+
+        // 下棋
+        var me = true; //标记人是否下棋   当是false时就不能下了
+        var over = false; //标记游戏是否结束  false没有结束  true结束了
+        var myWin = []; //记录用户在赢法上的分值
+        var computerWin = []; //记录计算机在赢法上的分值
+        for (var i = 0; i < count; i++) {
+            myWin[i] = 0; //给myWin一个初始值
+            computerWin[i] = 0; //给 computerWin一个初始值
+        }
+
+        chess.onclick = function(e) {
+            // 如果游戏结束就不可以下棋
+            if (over) {
+                return;
+            }
+            // 判断人是否下棋
+            if (!me) {
+                return;
+            }
+            // 获取x的坐标
+            var x = e.offsetX;
+            // 获取y的坐标
+            var y = e.offsetY;
+
+            var i = Math.floor(x / 30);
+            var j = Math.floor(y / 30);
+
+            // 判断是否有棋子
+            if (chessBoard[i][j] == 0) {
+                // 下一个棋子
+                // 调用下面的函数
+                oneStep(i, j, me);
+                // 标记已经下了一个棋子
+                chessBoard[i][j] = 1;
+
+                for (var k = 0; k < count; k++) {
+                    if (wins[i][j][k]) {
+                        myWin[k]++;
+                        if (myWin[k] == 5) {
+                            title.innerHTML = "恭喜你，你赢了";
+                            over = true;
+                        }
+                    }
+                }
+            }
+            if (!over) {
+                me = !me; //通过me来控制是不是用户下子。
+                // 开始的时候me是true，当用下过之后me改为false
+
+                // 计算机落子
+                computerAI();
+            }
+        };
+
+        // 计算机下子封装成一个方法
+        function computerAI() {
+            // 空白子在用户所占用赢法上的分值
+            var myScore = [];
+            // 空白子在计算机所占用赢法上的分值  就是计算机下自己的棋
+            // 下面进行初始化
+            var computeScore = [];
+            for (var i = 0; i < 15; i++) {
+                myScore[i] = [];
+                computeScore[i] = [];
+                // 遍历二维数组
+                for (var j = 0; j < 15; j++) {
+                    // 给二维数组初始值
+                    myScore[i][j] = 0;
+                    computeScore[i][j] = 0;
+                }
+            }
+            // 空白子的最大分值
+            var max = 0;
+            // 最大分值空白子的坐标
+            var x = 0,
+                y = 0;
+
+            for (var i = 0; i < 15; i++) {
+                for (var j = 0; j < 15; j++) {
+                    // 判断是否是空白子
+                    if (chessBoard[i][j] == 0) {
+                        for (var k = 0; k < count; k++) {
+                            if (wins[i][j][k]) {
+                                if (myWin[k] == 1) {
+                                    myScore[i][j] += 200;
+                                } else if (myWin[k] == 2) {
+                                    myScore[i][j] += 400;
+                                } else if (myWin[k] == 3) {
+                                    myScore[i][j] += 2000;
+                                } else if (myWin[k] == 4) {
+                                    myScore[i][j] += 10000;
+                                }
+                                if (computerWin[k] == 1) {
+                                    computeScore[i][j] += 220;
+                                } else if (computerWin[k] == 2) {
+                                    computeScore[i][j] += 420;
+                                } else if (computerWin[k] == 3) {
+                                    computeScore[i][j] += 2200;
+                                } else if (computerWin[k] == 4) {
+                                    computeScore[i][j] += 20000;
+                                }
+                            }
+                        }
+                        if (myScore[i][j] > max) {
+                            max = myScore[i][j];
+                            x = i;
+                            y = j;
+                        } else if (myScore[i][j] == max) {
+                            if (computeScore[i][j] > max) {
+                                max = computeScore[i][j];
+                                x = i;
+                                y = j;
+                            }
+                        }
+                        if (computeScore[i][j] > max) {
+                            max = computeScore[i][j];
+                            x = i;
+                            y = j;
+                        } else if (computeScore[i][j] == max) {
+                            if (myScore[i][j] > max) {
+                                max = myScore[i][j];
+                                x = i;
+                                y = j;
+                            }
+                        }
+                    }
+                }
+            }
+            oneStep(x, y, me);
+            chessBoard[x][y] = 1;
+            for (var k = 0; k < count; k++) {
+                if (wins[x][y][k]) {
+                    computerWin[k] += 1;
+                    if (computerWin[k] == 5) {
+                        title.innerHTML = "你输了";
+                        over = true;
+                    }
+                }
+            }
+            if (!over) {
+                me = !me;
+            }
+        }
+
+        // 落子的方法
+        function oneStep(i, j, me) {
+            // 起笔
+            context.beginPath();
+            context.arc(15 + i * 30, 15 + j * 30, 13, 0, 2 * Math.PI); //画圆 画棋子
+            // 落笔
+            context.closePath(); //如果没有起笔落笔就会有问题，就会连在一起
+            var color; //棋子的颜色
+            if (me) {
+                color = "#000000"; //我下的是黑色
+            } else {
+                color = "red"; //不是我下的是红色
+            }
+            context.fillStyle = color; //填充的样式改成color
+            context.fill(); //通过fill()方法去填充这个圆
+        }
+
+        function rst() {
+            window.location.reload();
+        }
+    </script>
+</body>
+
+</html>

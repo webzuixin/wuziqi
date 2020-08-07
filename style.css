@@ -1,0 +1,34 @@
+.title {
+    /* 文字居中 */
+    text-align: center;
+}
+
+
+/* 棋盘 */
+
+.chess {
+    /* 变成块级元素 */
+    display: block;
+    /* 居中 */
+    margin: 50px auto;
+    /* 设置阴影：里面四个数据：第一个X偏移量，第二个Y偏移量，第三个阴影的宽度，第四个阴影的颜色 */
+    box-shadow: 5px 5px 5px #b9b9b9;
+    /* 变成小手 */
+    cursor: pointer;
+}
+
+div {
+    text-align: center;
+}
+
+a {
+    text-decoration: none;
+}
+
+.restart {
+    padding: 10px 20px;
+    background-color: #ee82ee;
+    border-radius: 10%;
+    color: #fff;
+    cursor: pointer;
+}
